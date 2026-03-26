@@ -26,6 +26,7 @@ urlenum:
   use_waymore: true
   use_gau: true
   use_paramspider: true
+  use_gospider: true
   python_venv: "~/venv/bin/activate"
 
 # Nuclei DAST Scanner

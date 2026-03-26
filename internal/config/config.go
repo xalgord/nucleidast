@@ -31,6 +31,7 @@ type URLEnumConfig struct {
 	UseWaymore     bool   `yaml:"use_waymore"`
 	UseGau         bool   `yaml:"use_gau"`
 	UseParamspider bool   `yaml:"use_paramspider"`
+	UseGospider    bool   `yaml:"use_gospider"`
 	PythonVenv     string `yaml:"python_venv"`
 }
 
@@ -74,6 +75,7 @@ func DefaultConfig() *Config {
 			UseWaymore:     true,
 			UseGau:         true,
 			UseParamspider: true,
+			UseGospider:    true,
 			PythonVenv:     "~/venv/bin/activate",
 		},
 		Nuclei: NucleiConfig{

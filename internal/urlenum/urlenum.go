@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -70,6 +71,23 @@ func Enumerate(cfg *config.Config, domain string, liveSubdomains []string, outpu
 				return
 			}
 			utils.LogSuccess("paramspider found %d URLs for %s", len(urls), domain)
+			mu.Lock()
+			allURLs = append(allURLs, urls...)
+			mu.Unlock()
+		}()
+	}
+
+	// Gospider (runs per domain)
+	if cfg.URLEnum.UseGospider {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			urls, err := runGospider(domain, outputDir)
+			if err != nil {
+				utils.LogWarn("gospider failed for %s: %v", domain, err)
+				return
+			}
+			utils.LogSuccess("gospider found %d URLs for %s", len(urls), domain)
 			mu.Lock()
 			allURLs = append(allURLs, urls...)
 			mu.Unlock()
@@ -154,4 +172,56 @@ func runParamspider(domain, venvPath string) ([]string, error) {
 	}
 
 	return lines, nil
+}
+
+func runGospider(domain, outputDir string) ([]string, error) {
+	if !utils.ToolExists("gospider") {
+		return nil, fmt.Errorf("gospider not found in PATH")
+	}
+
+	gospiderOut := fmt.Sprintf("%s/gospider_%s", outputDir, domain)
+
+	args := []string{
+		"-s", fmt.Sprintf("http://%s", domain),
+		"-o", gospiderOut,
+		"-c", "10",
+		"-d", "1",
+		"--other-source",
+		"--include-subs",
+	}
+
+	_, err := utils.RunCommand(context.Background(), "gospider", args...)
+	if err != nil {
+		return nil, fmt.Errorf("gospider execution failed: %v", err)
+	}
+
+	// Gospider writes output files to the output directory
+	// Read all files from the output directory
+	var allURLs []string
+	entries, err := os.ReadDir(gospiderOut)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read gospider output dir: %v", err)
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		filePath := fmt.Sprintf("%s/%s", gospiderOut, entry.Name())
+		lines, err := utils.ReadLinesFromFile(filePath)
+		if err != nil {
+			continue
+		}
+		// Gospider prefixes lines with [source] - extract just the URL
+		for _, line := range lines {
+			parts := strings.SplitN(line, " - ", 2)
+			if len(parts) == 2 {
+				allURLs = append(allURLs, strings.TrimSpace(parts[1]))
+			} else {
+				allURLs = append(allURLs, strings.TrimSpace(line))
+			}
+		}
+	}
+
+	return allURLs, nil
 }
