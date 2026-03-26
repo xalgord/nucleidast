@@ -106,7 +106,7 @@ func Enumerate(cfg *config.Config, domain string, liveSubdomains []string, outpu
 func runWaymore(domain, outputDir, venvPath string) ([]string, error) {
 	outFile := fmt.Sprintf("%s/waymore_%s.txt", outputDir, domain)
 
-	shellCmd := fmt.Sprintf("source %s && waymore -i %s -mode U -oU %s 2>/dev/null",
+	shellCmd := fmt.Sprintf("source %q && waymore -i %q -mode U -oU %q 2>/dev/null",
 		venvPath, domain, outFile)
 
 	_, err := utils.RunShellCommand(context.Background(), shellCmd)
@@ -148,7 +148,7 @@ func runGau(domain string) ([]string, error) {
 }
 
 func runParamspider(domain, venvPath string) ([]string, error) {
-	shellCmd := fmt.Sprintf("source %s && paramspider -d %q -s 2>/dev/null",
+	shellCmd := fmt.Sprintf("source %q && paramspider -d %q -s 2>/dev/null",
 		venvPath, domain)
 
 	lines, err := utils.RunShellCommand(context.Background(), shellCmd)
@@ -190,16 +190,16 @@ func runGospider(domain, outputDir string) ([]string, error) {
 		"--include-subs",
 	}
 
-	_, err := utils.RunCommand(context.Background(), "gospider", args...)
-	if err != nil {
-		return nil, fmt.Errorf("gospider execution failed: %v", err)
-	}
+	_, runErr := utils.RunCommand(context.Background(), "gospider", args...)
 
 	// Gospider writes output files to the output directory
-	// Read all files from the output directory
+	// Read even on non-zero exit since it may have produced partial output
 	var allURLs []string
 	entries, err := os.ReadDir(gospiderOut)
 	if err != nil {
+		if runErr != nil {
+			return nil, fmt.Errorf("gospider execution failed: %v", runErr)
+		}
 		return nil, fmt.Errorf("failed to read gospider output dir: %v", err)
 	}
 

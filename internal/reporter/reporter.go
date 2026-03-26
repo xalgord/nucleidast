@@ -128,7 +128,9 @@ func (r *Reporter) sendScanStarted() {
 			},
 		},
 	}
-	r.send(payload)
+	if err := r.send(payload); err != nil {
+		utils.LogWarn("Failed to send scan started notification: %v", err)
+	}
 }
 
 func (r *Reporter) sendFinding(f scanner.Finding) error {
