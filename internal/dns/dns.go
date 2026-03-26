@@ -1,6 +1,7 @@
 package dns
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -40,16 +41,18 @@ func Resolve(cfg *config.Config, subdomains []string, outputDir string) ([]strin
 	cmd := exec.CommandContext(context.Background(), "dnsx", args...)
 	utils.LogDebug("Running: dnsx %s", strings.Join(args, " "))
 
-	output, err := cmd.Output()
-	if err != nil {
-		// Try to use partial output
-		if len(output) == 0 {
-			return nil, fmt.Errorf("dnsx failed: %v", err)
-		}
+	// Use separate buffers so we get stdout even on non-zero exit
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+	if err != nil && stdout.Len() == 0 {
+		return nil, fmt.Errorf("dnsx failed: %v (stderr: %s)", err, strings.TrimSpace(stderr.String()))
 	}
 
 	var results []string
-	for _, line := range strings.Split(string(output), "\n") {
+	for _, line := range strings.Split(stdout.String(), "\n") {
 		line = strings.TrimSpace(line)
 		if line != "" {
 			results = append(results, line)

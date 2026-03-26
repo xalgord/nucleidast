@@ -25,11 +25,6 @@ func Enumerate(cfg *config.Config, domain string, liveSubdomains []string, outpu
 
 	venvActivate := cfg.URLEnum.PythonVenv
 
-	// Run tools for each live subdomain as well as the root domain
-	targets := []string{domain}
-	targets = append(targets, liveSubdomains...)
-	targets = utils.DeduplicateLines(targets)
-
 	// Waymore (runs per domain)
 	if cfg.URLEnum.UseWaymore {
 		wg.Add(1)

@@ -75,7 +75,7 @@ func ToolExists(name string) bool {
 	return err == nil
 }
 
-// RunCommand executes a command with timeout and returns stdout lines
+// RunCommand executes a command and returns stdout lines
 func RunCommand(ctx context.Context, name string, args ...string) ([]string, error) {
 	cmd := exec.CommandContext(ctx, name, args...)
 	LogDebug("Running: %s %s", name, strings.Join(args, " "))
@@ -85,9 +85,13 @@ func RunCommand(ctx context.Context, name string, args ...string) ([]string, err
 		if ctx.Err() == context.DeadlineExceeded {
 			return nil, fmt.Errorf("command timed out: %s", name)
 		}
-		// Still try to parse output even on non-zero exit
+		// cmd.Output() returns stdout even on non-zero exit
 		if len(output) > 0 {
 			return parseLines(string(output)), nil
+		}
+		// Include stderr in error message for debugging
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			return nil, fmt.Errorf("command failed: %s: %v (stderr: %s)", name, err, strings.TrimSpace(string(exitErr.Stderr)))
 		}
 		return nil, fmt.Errorf("command failed: %s: %v", name, err)
 	}
@@ -95,7 +99,7 @@ func RunCommand(ctx context.Context, name string, args ...string) ([]string, err
 	return parseLines(string(output)), nil
 }
 
-// RunShellCommand runs a command through bash with timeout
+// RunShellCommand runs a command through bash
 func RunShellCommand(ctx context.Context, shellCmd string) ([]string, error) {
 	cmd := exec.CommandContext(ctx, "bash", "-c", shellCmd)
 	LogDebug("Running shell: %s", shellCmd)
@@ -107,6 +111,9 @@ func RunShellCommand(ctx context.Context, shellCmd string) ([]string, error) {
 		}
 		if len(output) > 0 {
 			return parseLines(string(output)), nil
+		}
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			return nil, fmt.Errorf("shell command failed: %v (stderr: %s)", err, strings.TrimSpace(string(exitErr.Stderr)))
 		}
 		return nil, fmt.Errorf("shell command failed: %v", err)
 	}

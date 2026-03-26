@@ -15,20 +15,18 @@ import (
 
 // Finding represents a single Nuclei vulnerability finding
 type Finding struct {
-	Template    string `json:"template-id"`
-	TemplateURL string `json:"template-url"`
-	Name        string `json:"info.name"`
-	Severity    string `json:"info.severity"`
-	Description string `json:"info.description"`
-	MatchedAt   string `json:"matched-at"`
-	Host        string `json:"host"`
-	IP          string `json:"ip"`
-	Timestamp   string `json:"timestamp"`
-	CURLCommand string `json:"curl-command"`
-	Type        string `json:"type"`
+	Template         string   `json:"template-id"`
+	TemplateURL      string   `json:"template-url"`
+	MatchedAt        string   `json:"matched-at"`
+	Host             string   `json:"host"`
+	IP               string   `json:"ip"`
+	Timestamp        string   `json:"timestamp"`
+	CURLCommand      string   `json:"curl-command"`
+	Type             string   `json:"type"`
 	ExtractedResults []string `json:"extracted-results"`
+	MatcherName      string   `json:"matcher-name"`
 
-	// Raw fields for nested JSON parsing
+	// Nuclei nests name/severity/description under "info"
 	Info struct {
 		Name        string   `json:"name"`
 		Severity    string   `json:"severity"`
@@ -37,7 +35,10 @@ type Finding struct {
 		Reference   []string `json:"reference"`
 	} `json:"info"`
 
-	MatcherName string `json:"matcher-name"`
+	// Convenience accessors (populated after parsing)
+	Name        string `json:"-"`
+	Severity    string `json:"-"`
+	Description string `json:"-"`
 }
 
 // Scan runs nuclei DAST scan and streams findings to the provided channel
@@ -107,16 +108,10 @@ func Scan(cfg *config.Config, urlsFile string, outputDir string, findings chan<-
 			continue
 		}
 
-		// Normalize fields from nested JSON
-		if finding.Severity == "" {
-			finding.Severity = finding.Info.Severity
-		}
-		if finding.Name == "" {
-			finding.Name = finding.Info.Name
-		}
-		if finding.Description == "" {
-			finding.Description = finding.Info.Description
-		}
+		// Populate convenience fields from nested Info struct
+		finding.Severity = finding.Info.Severity
+		finding.Name = finding.Info.Name
+		finding.Description = finding.Info.Description
 
 		findingCount++
 		utils.LogInfo("[%s] %s — %s",

@@ -309,8 +309,12 @@ func severityEmoji(severity string) string {
 }
 
 func truncate(s string, maxLen int) string {
-	if len(s) <= maxLen {
+	if maxLen <= 3 {
 		return s
 	}
-	return s[:maxLen-3] + "..."
+	runes := []rune(s)
+	if len(runes) <= maxLen {
+		return s
+	}
+	return string(runes[:maxLen-3]) + "..."
 }
