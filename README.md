@@ -121,14 +121,30 @@ urlenum:
   use_gospider: true
   python_venv: "~/venv/bin/activate"
 
-# Nuclei DAST Scanner
+# Nuclei Scan Profiles (run in parallel)
 nuclei:
-  severity: "critical,high,medium"
-  rate_limit: 5
-  concurrency: 5
-  dast: true
-  dashboard: true
-  extra_args: []
+  scans:
+    - name: "SQL Injection DAST"
+      severity: "critical,high,medium"
+      rate_limit: 5
+      concurrency: 5
+      dast: true
+      dashboard: true
+      tags: ""
+      templates: []
+      extra_args: []
+      enabled: true
+
+    - name: "SMTP Credentials"
+      severity: "critical,high,medium,low,info"
+      rate_limit: 10
+      concurrency: 10
+      dast: false
+      dashboard: true
+      tags: "smtp"
+      templates: []
+      extra_args: []
+      enabled: true
 
 # General
 output_dir: "./output"
@@ -136,16 +152,19 @@ max_concurrent_targets: 3
 verbose: false
 ```
 
+> **Scan Profiles**: You can add unlimited scan profiles under `nuclei.scans`. Each runs as a separate nuclei instance in parallel. Set `enabled: false` to disable a profile without removing it.
+
 ## Output Structure
 
 ```
 output/
 └── example.com/
-    ├── subdomains.txt          # All discovered subdomains
-    ├── live_subdomains.txt     # DNS-resolved live subdomains
-    ├── urls_raw.txt            # All enumerated URLs (before dedup)
-    ├── urls.txt                # Deduplicated URLs (after uro)
-    └── nuclei_results.jsonl    # Nuclei findings in JSONL format
+    ├── subdomains.txt                  # All discovered subdomains
+    ├── live_subdomains.txt             # DNS-resolved live subdomains
+    ├── urls_raw.txt                    # All enumerated URLs (before dedup)
+    ├── urls.txt                        # Deduplicated URLs (after uro)
+    ├── nuclei_sql_injection_dast.jsonl # SQLi scan findings
+    └── nuclei_smtp_credentials.jsonl   # SMTP scan findings
 ```
 
 ## Required Tools

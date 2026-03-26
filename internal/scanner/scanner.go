@@ -39,56 +39,69 @@ type Finding struct {
 	Name        string `json:"-"`
 	Severity    string `json:"-"`
 	Description string `json:"-"`
+	ScanProfile string `json:"-"` // which scan profile found this
 }
 
-// Scan runs nuclei DAST scan and streams findings to the provided channel
-func Scan(cfg *config.Config, urlsFile string, outputDir string, findings chan<- Finding) error {
-	defer close(findings)
-
+// Scan runs a single nuclei scan profile and streams findings to the provided channel.
+// NOTE: The caller is responsible for closing the findings channel.
+func Scan(profile config.NucleiScanProfile, urlsFile string, outputDir string, findings chan<- Finding) error {
 	if !utils.ToolExists("nuclei") {
 		return fmt.Errorf("nuclei not found in PATH")
 	}
 
-	utils.LogInfo("Starting Nuclei DAST scan on %s", urlsFile)
+	utils.LogInfo("[%s] Starting scan on %s", profile.Name, urlsFile)
 	start := time.Now()
 
-	outputFile := fmt.Sprintf("%s/nuclei_results.jsonl", outputDir)
+	// Sanitize profile name for filename
+	safeName := strings.ReplaceAll(strings.ToLower(profile.Name), " ", "_")
+	outputFile := fmt.Sprintf("%s/nuclei_%s.jsonl", outputDir, safeName)
 
 	args := []string{
 		"-l", urlsFile,
-		"-s", cfg.Nuclei.Severity,
-		"-rl", fmt.Sprintf("%d", cfg.Nuclei.RateLimit),
-		"-c", fmt.Sprintf("%d", cfg.Nuclei.Concurrency),
+		"-rl", fmt.Sprintf("%d", profile.RateLimit),
+		"-c", fmt.Sprintf("%d", profile.Concurrency),
 		"-jsonl",
 		"-o", outputFile,
 	}
 
-	if cfg.Nuclei.DAST {
+	if profile.Severity != "" {
+		args = append(args, "-s", profile.Severity)
+	}
+
+	if profile.DAST {
 		args = append(args, "-dast")
 	}
 
-	if cfg.Nuclei.Dashboard {
+	if profile.Dashboard {
 		args = append(args, "-dashboard")
 	}
 
-	for _, extra := range cfg.Nuclei.ExtraArgs {
+	if profile.Tags != "" {
+		args = append(args, "-tags", profile.Tags)
+	}
+
+	for _, tmpl := range profile.Templates {
+		args = append(args, "-t", tmpl)
+	}
+
+	for _, extra := range profile.ExtraArgs {
 		args = append(args, extra)
 	}
 
 	cmd := exec.CommandContext(context.Background(), "nuclei", args...)
-	utils.LogDebug("Running: nuclei %s", strings.Join(args, " "))
+	utils.LogDebug("[%s] Running: nuclei %s", profile.Name, strings.Join(args, " "))
 
 	// Get stdout pipe to stream findings as they come
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return fmt.Errorf("failed to create stdout pipe: %w", err)
+		return fmt.Errorf("[%s] failed to create stdout pipe: %w", profile.Name, err)
 	}
 
 	// Suppress stderr noise
 	cmd.Stderr = nil
 
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("failed to start nuclei: %w", err)
+		return fmt.Errorf("[%s] failed to start nuclei: %w", profile.Name, err)
 	}
 
 	// Read output line by line and parse JSONL
@@ -104,7 +117,7 @@ func Scan(cfg *config.Config, urlsFile string, outputDir string, findings chan<-
 
 		var finding Finding
 		if err := json.Unmarshal([]byte(line), &finding); err != nil {
-			utils.LogDebug("Failed to parse nuclei output line: %s", line)
+			utils.LogDebug("[%s] Failed to parse nuclei output line: %s", profile.Name, line)
 			continue
 		}
 
@@ -112,9 +125,11 @@ func Scan(cfg *config.Config, urlsFile string, outputDir string, findings chan<-
 		finding.Severity = finding.Info.Severity
 		finding.Name = finding.Info.Name
 		finding.Description = finding.Info.Description
+		finding.ScanProfile = profile.Name
 
 		findingCount++
-		utils.LogInfo("[%s] %s — %s",
+		utils.LogInfo("[%s] [%s] %s — %s",
+			profile.Name,
 			severityColor(finding.Severity),
 			finding.Name,
 			finding.MatchedAt)
@@ -125,11 +140,11 @@ func Scan(cfg *config.Config, urlsFile string, outputDir string, findings chan<-
 
 	if err := cmd.Wait(); err != nil {
 		// Non-zero exit is common for nuclei, not necessarily an error
-		utils.LogDebug("nuclei exited with: %v", err)
+		utils.LogDebug("[%s] nuclei exited with: %v", profile.Name, err)
 	}
 
 	elapsed := time.Since(start).Round(time.Second)
-	utils.LogSuccess("Nuclei scan complete: %d findings in %s", findingCount, elapsed)
+	utils.LogSuccess("[%s] Scan complete: %d findings in %s", profile.Name, findingCount, elapsed)
 
 	return nil
 }

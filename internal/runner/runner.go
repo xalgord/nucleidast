@@ -145,14 +145,23 @@ func processDomain(cfg *config.Config, domain string) error {
 	utils.LogInfo("uro reduced %d → %d URLs", len(urls), len(filteredURLs))
 
 	// ────────────────────────────────────────────
-	// Stage 4 & 5: Nuclei Scan + Discord Reporting (parallel)
+	// Stage 4 & 5: Nuclei Scans + Discord Reporting (parallel)
 	// ────────────────────────────────────────────
-	utils.LogInfo("▶ Stage 4: Nuclei DAST Scan + Discord Reporting")
+	enabledScans := cfg.EnabledScans()
+	if len(enabledScans) == 0 {
+		utils.LogWarn("No nuclei scan profiles enabled, skipping")
+		return nil
+	}
 
-	// Create a channel to stream findings from scanner to reporter
+	utils.LogInfo("▶ Stage 4: Launching %d nuclei scan(s) in parallel", len(enabledScans))
+	for _, s := range enabledScans {
+		utils.LogInfo("  • %s (severity=%s, dast=%v, tags=%s)", s.Name, s.Severity, s.DAST, s.Tags)
+	}
+
+	// Single findings channel — all scan profiles write to it
 	findings := make(chan scanner.Finding, 100)
 
-	// Start Discord reporter in a goroutine (consumes findings in parallel)
+	// Start Discord reporter (consumes findings)
 	rep := reporter.New(cfg, domain)
 	var reportWg sync.WaitGroup
 	reportWg.Add(1)
@@ -161,10 +170,21 @@ func processDomain(cfg *config.Config, domain string) error {
 		rep.StreamFindings(findings)
 	}()
 
-	// Run nuclei scanner (produces findings into the channel)
-	if err := scanner.Scan(cfg, urlsFile, domainOutputDir, findings); err != nil {
-		utils.LogError("Nuclei scan error for %s: %v", domain, err)
+	// Launch all scan profiles in parallel
+	var scanWg sync.WaitGroup
+	for _, profile := range enabledScans {
+		scanWg.Add(1)
+		go func(p config.NucleiScanProfile) {
+			defer scanWg.Done()
+			if err := scanner.Scan(p, urlsFile, domainOutputDir, findings); err != nil {
+				utils.LogError("[%s] scan error for %s: %v", p.Name, domain, err)
+			}
+		}(profile)
 	}
+
+	// Wait for all scans to finish, then close the channel
+	scanWg.Wait()
+	close(findings)
 
 	// Wait for reporter to finish processing all findings
 	reportWg.Wait()

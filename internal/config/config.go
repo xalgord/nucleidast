@@ -35,13 +35,22 @@ type URLEnumConfig struct {
 	PythonVenv     string `yaml:"python_venv"`
 }
 
-type NucleiConfig struct {
+// NucleiScanProfile defines a single nuclei scan configuration
+type NucleiScanProfile struct {
+	Name        string   `yaml:"name"`
 	Severity    string   `yaml:"severity"`
 	RateLimit   int      `yaml:"rate_limit"`
 	Concurrency int      `yaml:"concurrency"`
 	DAST        bool     `yaml:"dast"`
 	Dashboard   bool     `yaml:"dashboard"`
+	Tags        string   `yaml:"tags"`
+	Templates   []string `yaml:"templates"`
 	ExtraArgs   []string `yaml:"extra_args"`
+	Enabled     bool     `yaml:"enabled"`
+}
+
+type NucleiConfig struct {
+	Scans []NucleiScanProfile `yaml:"scans"`
 }
 
 type Config struct {
@@ -79,11 +88,27 @@ func DefaultConfig() *Config {
 			PythonVenv:     "~/venv/bin/activate",
 		},
 		Nuclei: NucleiConfig{
-			Severity:    "critical,high,medium",
-			RateLimit:   5,
-			Concurrency: 5,
-			DAST:        true,
-			Dashboard:   true,
+			Scans: []NucleiScanProfile{
+				{
+					Name:        "SQL Injection DAST",
+					Severity:    "critical,high,medium",
+					RateLimit:   5,
+					Concurrency: 5,
+					DAST:        true,
+					Dashboard:   true,
+					Enabled:     true,
+				},
+				{
+					Name:        "SMTP Credentials",
+					Severity:    "critical,high,medium,low,info",
+					RateLimit:   10,
+					Concurrency: 10,
+					DAST:        false,
+					Dashboard:   true,
+					Tags:        "smtp",
+					Enabled:     true,
+				},
+			},
 		},
 		OutputDir:            "./output",
 		MaxConcurrentTargets: 3,
@@ -124,11 +149,18 @@ func (c *Config) validate() error {
 	if c.MaxConcurrentTargets < 1 {
 		c.MaxConcurrentTargets = 1
 	}
-	if c.Nuclei.RateLimit < 1 {
-		c.Nuclei.RateLimit = 5
-	}
-	if c.Nuclei.Concurrency < 1 {
-		c.Nuclei.Concurrency = 5
+	// Validate each scan profile
+	for i := range c.Nuclei.Scans {
+		scan := &c.Nuclei.Scans[i]
+		if scan.RateLimit < 1 {
+			scan.RateLimit = 5
+		}
+		if scan.Concurrency < 1 {
+			scan.Concurrency = 5
+		}
+		if scan.Name == "" {
+			scan.Name = fmt.Sprintf("Scan %d", i+1)
+		}
 	}
 	if c.Discord.BatchSize < 1 {
 		c.Discord.BatchSize = 10
@@ -148,4 +180,15 @@ func (c *Config) ShouldNotify(severity string) bool {
 		}
 	}
 	return false
+}
+
+// EnabledScans returns only the enabled scan profiles
+func (c *Config) EnabledScans() []NucleiScanProfile {
+	var enabled []NucleiScanProfile
+	for _, scan := range c.Nuclei.Scans {
+		if scan.Enabled {
+			enabled = append(enabled, scan)
+		}
+	}
+	return enabled
 }

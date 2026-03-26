@@ -29,14 +29,32 @@ urlenum:
   use_gospider: true
   python_venv: "~/venv/bin/activate"
 
-# Nuclei DAST Scanner
+# Nuclei Scan Profiles (run in parallel)
 nuclei:
-  severity: "critical,high,medium"
-  rate_limit: 5
-  concurrency: 5
-  dast: true
-  dashboard: true
-  extra_args: []
+  scans:
+    # Profile 1: SQL Injection DAST Scanning
+    - name: "SQL Injection DAST"
+      severity: "critical,high,medium"
+      rate_limit: 5
+      concurrency: 5
+      dast: true
+      dashboard: true
+      tags: ""
+      templates: []
+      extra_args: []
+      enabled: true
+
+    # Profile 2: SMTP Credential Discovery
+    - name: "SMTP Credentials"
+      severity: "critical,high,medium,low,info"
+      rate_limit: 10
+      concurrency: 10
+      dast: false
+      dashboard: true
+      tags: "smtp"
+      templates: []
+      extra_args: []
+      enabled: true
 
 # General Settings
 output_dir: "./output"

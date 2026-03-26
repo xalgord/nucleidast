@@ -182,7 +182,7 @@ func (r *Reporter) sendFinding(f scanner.Finding) error {
 		Description: desc,
 		Color:       color,
 		Fields:      fields,
-		Footer:      &Footer{Text: fmt.Sprintf("NucleiDAST • %s", r.domain)},
+		Footer:      &Footer{Text: fmt.Sprintf("NucleiDAST • %s • %s", f.ScanProfile, r.domain)},
 		Timestamp:   time.Now().UTC().Format(time.RFC3339),
 	}
 

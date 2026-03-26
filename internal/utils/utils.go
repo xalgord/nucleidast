@@ -207,7 +207,7 @@ func EnsureDir(path string) error {
 func Banner() {
 	banner := `
     ╔═══════════════════════════════════════════════╗
-    ║           %sNucleiDAST%s v1.0.4                   ║
+    ║           %sNucleiDAST%s v1.1.0                   ║
     ║     Automated DAST Scanning Pipeline          ║
     ║                                               ║
     ║  Subdomains → DNS → URLs → Nuclei → Discord   ║
