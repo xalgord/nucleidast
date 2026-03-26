@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"nucleidast/internal/config"
-	"nucleidast/internal/utils"
+	"github.com/xalgord/nucleidast/internal/config"
+	"github.com/xalgord/nucleidast/internal/utils"
 )
 
 // Enumerate runs all enabled subdomain enumeration tools in parallel

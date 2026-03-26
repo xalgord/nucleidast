@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
-	"nucleidast/internal/config"
-	"nucleidast/internal/scanner"
-	"nucleidast/internal/utils"
+	"github.com/xalgord/nucleidast/internal/config"
+	"github.com/xalgord/nucleidast/internal/scanner"
+	"github.com/xalgord/nucleidast/internal/utils"
 )
 
 // Discord embed color codes

@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"nucleidast/internal/config"
-	"nucleidast/internal/utils"
+	"github.com/xalgord/nucleidast/internal/config"
+	"github.com/xalgord/nucleidast/internal/utils"
 )
 
 // Finding represents a single Nuclei vulnerability finding

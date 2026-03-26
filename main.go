@@ -5,9 +5,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"nucleidast/internal/config"
-	"nucleidast/internal/runner"
-	"nucleidast/internal/utils"
+	"github.com/xalgord/nucleidast/internal/config"
+	"github.com/xalgord/nucleidast/internal/runner"
+	"github.com/xalgord/nucleidast/internal/utils"
 
 	"github.com/spf13/cobra"
 )

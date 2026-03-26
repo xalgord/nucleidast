@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"nucleidast/internal/config"
-	"nucleidast/internal/utils"
+	"github.com/xalgord/nucleidast/internal/config"
+	"github.com/xalgord/nucleidast/internal/utils"
 )
 
 // DeduplicateWithUro runs uro to filter out similar/redundant URLs

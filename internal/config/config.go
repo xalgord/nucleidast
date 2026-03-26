@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"nucleidast/internal/utils"
+	"github.com/xalgord/nucleidast/internal/utils"
 
 	"gopkg.in/yaml.v3"
 )

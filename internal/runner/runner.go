@@ -5,13 +5,13 @@ import (
 	"sync"
 	"time"
 
-	"nucleidast/internal/config"
-	"nucleidast/internal/dns"
-	"nucleidast/internal/reporter"
-	"nucleidast/internal/scanner"
-	"nucleidast/internal/subdomain"
-	"nucleidast/internal/urlenum"
-	"nucleidast/internal/utils"
+	"github.com/xalgord/nucleidast/internal/config"
+	"github.com/xalgord/nucleidast/internal/dns"
+	"github.com/xalgord/nucleidast/internal/reporter"
+	"github.com/xalgord/nucleidast/internal/scanner"
+	"github.com/xalgord/nucleidast/internal/subdomain"
+	"github.com/xalgord/nucleidast/internal/urlenum"
+	"github.com/xalgord/nucleidast/internal/utils"
 )
 
 // Run executes the full DAST pipeline for all targets
