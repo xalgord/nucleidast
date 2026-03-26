@@ -44,14 +44,14 @@ nuclei:
       extra_args: []
       enabled: true
 
-    # Profile 2: SMTP Credential Discovery
-    - name: "SMTP Credentials"
+    # Profile 2: SMTP & Config Credential Discovery
+    - name: "SMTP & Config Credentials"
       severity: "critical,high,medium,low,info"
       rate_limit: 10
       concurrency: 10
       dast: false
       dashboard: true
-      tags: "smtp"
+      tags: "smtp,mail,exposure,config"
       templates: []
       extra_args: []
       enabled: true

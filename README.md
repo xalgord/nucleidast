@@ -135,13 +135,13 @@ nuclei:
       extra_args: []
       enabled: true
 
-    - name: "SMTP Credentials"
+    - name: "SMTP & Config Credentials"
       severity: "critical,high,medium,low,info"
       rate_limit: 10
       concurrency: 10
       dast: false
       dashboard: true
-      tags: "smtp"
+      tags: "smtp,mail,exposure,config"
       templates: []
       extra_args: []
       enabled: true
@@ -163,8 +163,8 @@ output/
     ├── live_subdomains.txt             # DNS-resolved live subdomains
     ├── urls_raw.txt                    # All enumerated URLs (before dedup)
     ├── urls.txt                        # Deduplicated URLs (after uro)
-    ├── nuclei_sql_injection_dast.jsonl # SQLi scan findings
-    └── nuclei_smtp_credentials.jsonl   # SMTP scan findings
+    ├── nuclei_sql_injection_dast.jsonl          # SQLi scan findings
+    └── nuclei_smtp_&_config_credentials.jsonl   # SMTP & config scan findings
 ```
 
 ## Required Tools
