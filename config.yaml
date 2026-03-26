@@ -1,0 +1,43 @@
+# NucleiDAST Configuration
+# ========================
+
+# Discord Webhook Reporting
+discord:
+  webhook_url: ""
+  notify_on:
+    - critical
+    - high
+    - medium
+  batch_size: 10          # max findings per message batch
+
+# Subdomain Enumeration
+subdomain:
+  threads: 100
+  use_subfinder: true
+  use_findomain: true
+  use_assetfinder: true
+
+# DNS Resolution (dnsx)
+dns:
+  threads: 100
+
+# URL Enumeration
+urlenum:
+  use_waymore: true
+  use_gau: true
+  use_paramspider: true
+  python_venv: "~/venv/bin/activate"
+
+# Nuclei DAST Scanner
+nuclei:
+  severity: "critical,high,medium"
+  rate_limit: 5
+  concurrency: 5
+  dast: true
+  dashboard: true
+  extra_args: []
+
+# General Settings
+output_dir: "./output"
+max_concurrent_targets: 3
+verbose: false
