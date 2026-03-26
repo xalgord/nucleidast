@@ -41,6 +41,12 @@ NucleiDAST orchestrates an end-to-end **Dynamic Application Security Testing** p
 
 ## Installation
 
+### Using Go Install
+
+```bash
+go install github.com/xalgord/nucleidast@latest
+```
+
 ### From Source
 
 ```bash
