@@ -24,14 +24,15 @@ NucleiDAST orchestrates an end-to-end **Dynamic Application Security Testing** p
 └──────────┘    │ • subfinder       │    └──────────┘    │ • waymore       │    └──────────┘    └──────────────┘    └─────────┘
                 │ • findomain       │                    │ • gau           │
                 │ • assetfinder     │                    │ • paramspider   │
-                └───────────────────┘                    └─────────────────┘
+                └───────────────────┘                    │ • gospider      │
+                                                        └─────────────────┘
 ```
 
 ## Features
 
 - 🔍 **Subdomain Enumeration** — subfinder, findomain, assetfinder running in parallel
 - 🌐 **DNS Resolution** — dnsx filters to only live/resolvable hosts
-- 🔗 **URL Enumeration** — waymore, gau, paramspider running in parallel (Python venv-aware)
+- 🔗 **URL Enumeration** — waymore, gau, paramspider, gospider running in parallel (Python venv-aware)
 - 🧹 **URL Deduplication** — [uro](https://github.com/s0md3v/uro) removes similar/redundant URLs before scanning
 - 🎯 **Vulnerability Scanning** — Nuclei DAST with configurable severity & rate limits
 - 📢 **Discord Reporting** — Rich embeds with color-coded severity, streamed in real-time
@@ -117,6 +118,7 @@ urlenum:
   use_waymore: true
   use_gau: true
   use_paramspider: true
+  use_gospider: true
   python_venv: "~/venv/bin/activate"
 
 # Nuclei DAST Scanner
@@ -155,6 +157,7 @@ output/
 | [assetfinder](https://github.com/tomnomnom/assetfinder) | Go | `go install github.com/tomnomnom/assetfinder@latest` |
 | [dnsx](https://github.com/projectdiscovery/dnsx) | Go | `go install github.com/projectdiscovery/dnsx/cmd/dnsx@latest` |
 | [gau](https://github.com/lc/gau) | Go | `go install github.com/lc/gau/v2/cmd/gau@latest` |
+| [gospider](https://github.com/jaeles-project/gospider) | Go | `go install github.com/jaeles-project/gospider@latest` |
 | [nuclei](https://github.com/projectdiscovery/nuclei) | Go | `go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest` |
 | [waymore](https://github.com/xnl-h4ck3r/waymore) | Python | `pip install waymore` |
 | [paramspider](https://github.com/devanshbatham/ParamSpider) | Python | `pip install paramspider` |
