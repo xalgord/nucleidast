@@ -100,7 +100,7 @@ func DefaultConfig() *Config {
 				},
 				{
 					Name:        "SMTP & Config Credentials",
-					Severity:    "critical,high,medium,low,info",
+					Severity:    "critical,high,medium",
 					RateLimit:   10,
 					Concurrency: 10,
 					DAST:        false,

@@ -46,7 +46,7 @@ nuclei:
 
     # Profile 2: SMTP & Config Credential Discovery
     - name: "SMTP & Config Credentials"
-      severity: "critical,high,medium,low,info"
+      severity: "critical,high,medium"
       rate_limit: 10
       concurrency: 10
       dast: false
