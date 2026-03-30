@@ -149,6 +149,27 @@ func (c *Config) validate() error {
 	if c.MaxConcurrentTargets < 1 {
 		c.MaxConcurrentTargets = 1
 	}
+	if c.OutputDir == "" {
+		c.OutputDir = "./output"
+	}
+	// Validate subdomain config
+	if c.Subdomain.Threads < 1 {
+		c.Subdomain.Threads = 100
+	}
+	// Validate DNS config
+	if c.DNS.Threads < 1 {
+		c.DNS.Threads = 100
+	}
+	// Validate Python venv if any Python tool is enabled
+	needsVenv := c.URLEnum.UseWaymore || c.URLEnum.UseParamspider
+	if needsVenv && c.URLEnum.PythonVenv == "" {
+		utils.LogWarn("Python tools enabled but python_venv not set — waymore/paramspider/uro may fail")
+	}
+	if needsVenv && c.URLEnum.PythonVenv != "" {
+		if _, err := os.Stat(c.URLEnum.PythonVenv); err != nil {
+			utils.LogWarn("Python venv path not found: %s — waymore/paramspider/uro may fail", c.URLEnum.PythonVenv)
+		}
+	}
 	// Validate each scan profile
 	for i := range c.Nuclei.Scans {
 		scan := &c.Nuclei.Scans[i]

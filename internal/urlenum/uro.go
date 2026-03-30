@@ -3,6 +3,7 @@ package urlenum
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/xalgord/nucleidast/internal/config"
@@ -16,6 +17,14 @@ func DeduplicateWithUro(cfg *config.Config, inputFile, outputFile string) ([]str
 	start := time.Now()
 
 	venvPath := cfg.URLEnum.PythonVenv
+	if venvPath == "" {
+		return nil, fmt.Errorf("python_venv not configured, cannot run uro")
+	}
+
+	// Check input file exists
+	if _, err := os.Stat(inputFile); err != nil {
+		return nil, fmt.Errorf("uro input file not accessible: %w", err)
+	}
 
 	shellCmd := fmt.Sprintf("source %q && uro -i %q -o %q",
 		venvPath, inputFile, outputFile)

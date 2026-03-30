@@ -130,16 +130,18 @@ func runWaymore(domain, outputDir, venvPath string) ([]string, error) {
 func runGau(domain string) ([]string, error) {
 	// Dynamically resolve gau binary path
 	gauPath := ""
-	homeDir, _ := os.UserHomeDir()
-	candidates := []string{
-		fmt.Sprintf("%s/go/bin/gau", homeDir),
-		"/usr/local/bin/gau",
-		"/usr/bin/gau",
-	}
-	for _, p := range candidates {
-		if _, err := os.Stat(p); err == nil {
-			gauPath = p
-			break
+	homeDir, homeErr := os.UserHomeDir()
+	if homeErr == nil {
+		candidates := []string{
+			fmt.Sprintf("%s/go/bin/gau", homeDir),
+			"/usr/local/bin/gau",
+			"/usr/bin/gau",
+		}
+		for _, p := range candidates {
+			if _, err := os.Stat(p); err == nil {
+				gauPath = p
+				break
+			}
 		}
 	}
 

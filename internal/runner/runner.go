@@ -192,12 +192,17 @@ func processDomain(cfg *config.Config, domain string) error {
 
 	// Launch all scan profiles in parallel
 	var scanWg sync.WaitGroup
+	var scanErrs []string
+	var scanErrMu sync.Mutex
 	for _, profile := range enabledScans {
 		scanWg.Add(1)
 		go func(p config.NucleiScanProfile) {
 			defer scanWg.Done()
 			if err := scanner.Scan(p, urlsFile, domainOutputDir, findings); err != nil {
 				utils.LogError("[%s] scan error for %s: %v", p.Name, domain, err)
+				scanErrMu.Lock()
+				scanErrs = append(scanErrs, fmt.Sprintf("[%s]: %v", p.Name, err))
+				scanErrMu.Unlock()
 			}
 		}(profile)
 	}
@@ -208,6 +213,11 @@ func processDomain(cfg *config.Config, domain string) error {
 
 	// Wait for reporter to finish processing all findings
 	reportWg.Wait()
+
+	if len(scanErrs) > 0 {
+		utils.LogWarn("%d scan profile(s) had errors for %s", len(scanErrs), domain)
+		return fmt.Errorf("scan errors: %s", strings.Join(scanErrs, "; "))
+	}
 
 	utils.LogSuccess("Pipeline complete for %s", domain)
 	return nil

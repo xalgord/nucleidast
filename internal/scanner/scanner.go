@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -47,6 +48,15 @@ type Finding struct {
 func Scan(profile config.NucleiScanProfile, urlsFile string, outputDir string, findings chan<- Finding) error {
 	if !utils.ToolExists("nuclei") {
 		return fmt.Errorf("nuclei not found in PATH")
+	}
+
+	// Verify input file exists and is not empty
+	info, err := os.Stat(urlsFile)
+	if err != nil {
+		return fmt.Errorf("[%s] URLs file not accessible: %w", profile.Name, err)
+	}
+	if info.Size() == 0 {
+		return fmt.Errorf("[%s] URLs file is empty: %s", profile.Name, urlsFile)
 	}
 
 	utils.LogInfo("[%s] Starting scan on %s", profile.Name, urlsFile)
@@ -104,12 +114,12 @@ func Scan(profile config.NucleiScanProfile, urlsFile string, outputDir string, f
 	}
 
 	// Read output line by line and parse JSONL
-	scanner := bufio.NewScanner(stdout)
-	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
+	scannerObj := bufio.NewScanner(stdout)
+	scannerObj.Buffer(make([]byte, 1024*1024), 1024*1024)
 	findingCount := 0
 
-	for scanner.Scan() {
-		line := scanner.Text()
+	for scannerObj.Scan() {
+		line := scannerObj.Text()
 		if strings.TrimSpace(line) == "" {
 			continue
 		}
@@ -137,8 +147,12 @@ func Scan(profile config.NucleiScanProfile, urlsFile string, outputDir string, f
 		findings <- finding
 	}
 
+	if scanErr := scannerObj.Err(); scanErr != nil {
+		utils.LogWarn("[%s] error reading nuclei output: %v", profile.Name, scanErr)
+	}
+
 	if err := cmd.Wait(); err != nil {
-		// Non-zero exit is common for nuclei, not necessarily an error
+		// Non-zero exit is common for nuclei (e.g. findings found), only log at debug
 		utils.LogDebug("[%s] nuclei exited with: %v", profile.Name, err)
 	}
 
