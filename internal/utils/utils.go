@@ -24,7 +24,7 @@ const (
 )
 
 // Version is the current version of NucleiDAST — update this for new releases
-const Version = "1.1.4"
+const Version = "1.1.5"
 
 // domainRegex validates hostnames (RFC 952 / RFC 1123)
 var domainRegex = regexp.MustCompile(`^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$`)
