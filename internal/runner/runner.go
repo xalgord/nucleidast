@@ -1,8 +1,8 @@
 package runner
 
 import (
-	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -68,10 +68,12 @@ func Run(cfg *config.Config, targets []string) error {
 
 	if len(errs) > 0 {
 		utils.LogWarn("%d target(s) had errors:", len(errs))
+		var errMsgs []string
 		for _, err := range errs {
 			utils.LogError("  → %v", err)
+			errMsgs = append(errMsgs, err.Error())
 		}
-		return errors.Join(errs...)
+		return fmt.Errorf("%s", strings.Join(errMsgs, "; "))
 	}
 
 	return nil
