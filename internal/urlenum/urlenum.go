@@ -150,7 +150,7 @@ func runGau(domain string) ([]string, error) {
 		gauPath = "gau"
 	}
 
-	return utils.RunCommand(context.Background(), gauPath, domain, "--subs")
+	return utils.RunCommand(context.Background(), gauPath, domain, "--subs", "--threads", "5")
 }
 
 func runParamspider(domain, venvPath, outputDir string) ([]string, error) {
@@ -193,9 +193,10 @@ func runGospider(domain, outputDir string) ([]string, error) {
 		"-s", fmt.Sprintf("http://%s", domain),
 		"-o", gospiderOut,
 		"-c", "10",
-		"-d", "1",
+		"-d", "2",
 		"--other-source",
 		"--include-subs",
+		"--blacklist", ".(jpg|jpeg|png|gif|css|ico|woff|woff2|ttf|svg|eot|mp4|mp3|pdf)",
 	}
 
 	_, runErr := utils.RunCommand(context.Background(), "gospider", args...)

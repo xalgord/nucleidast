@@ -61,6 +61,7 @@ func Scan(profile config.NucleiScanProfile, urlsFile string, outputDir string, f
 		"-rl", fmt.Sprintf("%d", profile.RateLimit),
 		"-c", fmt.Sprintf("%d", profile.Concurrency),
 		"-jsonl",
+		"-silent",
 		"-o", outputFile,
 	}
 

@@ -17,7 +17,7 @@ func DeduplicateWithUro(cfg *config.Config, inputFile, outputFile string) ([]str
 
 	venvPath := cfg.URLEnum.PythonVenv
 
-	shellCmd := fmt.Sprintf("source %q && cat %q | uro > %q",
+	shellCmd := fmt.Sprintf("source %q && uro -i %q -o %q",
 		venvPath, inputFile, outputFile)
 
 	_, err := utils.RunShellCommand(context.Background(), shellCmd)

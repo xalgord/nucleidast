@@ -111,6 +111,5 @@ func runAssetfinder(domain string) ([]string, error) {
 		return nil, fmt.Errorf("assetfinder not found in PATH")
 	}
 
-	shellCmd := fmt.Sprintf("echo %q | assetfinder --subs-only", domain)
-	return utils.RunShellCommand(context.Background(), shellCmd)
+	return utils.RunCommand(context.Background(), "assetfinder", "--subs-only", domain)
 }
