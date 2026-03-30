@@ -165,8 +165,10 @@ func (c *Config) validate() error {
 	if c.Discord.BatchSize < 1 {
 		c.Discord.BatchSize = 10
 	}
-	if c.Discord.WebhookURL != "" && !strings.HasPrefix(c.Discord.WebhookURL, "https://discord.com/api/webhooks/") {
-		return fmt.Errorf("invalid discord webhook URL: must start with https://discord.com/api/webhooks/")
+	if c.Discord.WebhookURL != "" &&
+		!strings.HasPrefix(c.Discord.WebhookURL, "https://discord.com/api/webhooks/") &&
+		!strings.HasPrefix(c.Discord.WebhookURL, "https://discordapp.com/api/webhooks/") {
+		utils.LogWarn("Discord webhook URL may be invalid (expected https://discord.com/api/webhooks/...) — notifications may fail")
 	}
 	return nil
 }
