@@ -86,10 +86,7 @@ func Scan(profile config.NucleiScanProfile, urlsFile string, outputDir string, f
 
 	args = append(args, profile.ExtraArgs...)
 
-	ctx, cancel := context.WithTimeout(context.Background(), utils.LongToolTimeout)
-	defer cancel()
-
-	cmd := exec.CommandContext(ctx, "nuclei", args...)
+	cmd := exec.CommandContext(context.Background(), "nuclei", args...)
 	utils.LogDebug("[%s] Running: nuclei %s", profile.Name, strings.Join(args, " "))
 
 	// Get stdout pipe to stream findings as they come

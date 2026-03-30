@@ -23,13 +23,6 @@ const (
 	ColorGray   = "\033[90m"
 )
 
-// Default timeouts for external tool commands
-const (
-	DefaultToolTimeout  = 10 * time.Minute
-	LongToolTimeout     = 30 * time.Minute
-	ShortToolTimeout    = 5 * time.Minute
-)
-
 // domainRegex validates hostnames (RFC 952 / RFC 1123)
 var domainRegex = regexp.MustCompile(`^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$`)
 

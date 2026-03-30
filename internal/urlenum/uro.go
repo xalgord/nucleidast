@@ -17,13 +17,10 @@ func DeduplicateWithUro(cfg *config.Config, inputFile, outputFile string) ([]str
 
 	venvPath := cfg.URLEnum.PythonVenv
 
-	ctx, cancel := context.WithTimeout(context.Background(), utils.DefaultToolTimeout)
-	defer cancel()
-
 	shellCmd := fmt.Sprintf("source %q && cat %q | uro > %q",
 		venvPath, inputFile, outputFile)
 
-	_, err := utils.RunShellCommand(ctx, shellCmd)
+	_, err := utils.RunShellCommand(context.Background(), shellCmd)
 	if err != nil {
 		return nil, fmt.Errorf("uro execution failed: %v", err)
 	}

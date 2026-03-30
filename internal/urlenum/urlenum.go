@@ -31,9 +31,7 @@ func Enumerate(cfg *config.Config, domain string, outputDir string) []string {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			ctx, cancel := context.WithTimeout(context.Background(), utils.DefaultToolTimeout)
-			defer cancel()
-			urls, err := runWaymore(ctx, domain, outputDir, venvActivate)
+			urls, err := runWaymore(domain, outputDir, venvActivate)
 			if err != nil {
 				utils.LogWarn("waymore failed for %s: %v", domain, err)
 				return
@@ -50,9 +48,7 @@ func Enumerate(cfg *config.Config, domain string, outputDir string) []string {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			ctx, cancel := context.WithTimeout(context.Background(), utils.DefaultToolTimeout)
-			defer cancel()
-			urls, err := runGau(ctx, domain)
+			urls, err := runGau(domain)
 			if err != nil {
 				utils.LogWarn("gau failed for %s: %v", domain, err)
 				return
@@ -69,9 +65,7 @@ func Enumerate(cfg *config.Config, domain string, outputDir string) []string {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			ctx, cancel := context.WithTimeout(context.Background(), utils.DefaultToolTimeout)
-			defer cancel()
-			urls, err := runParamspider(ctx, domain, venvActivate, outputDir)
+			urls, err := runParamspider(domain, venvActivate, outputDir)
 			if err != nil {
 				utils.LogWarn("paramspider failed for %s: %v", domain, err)
 				return
@@ -88,9 +82,7 @@ func Enumerate(cfg *config.Config, domain string, outputDir string) []string {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			ctx, cancel := context.WithTimeout(context.Background(), utils.DefaultToolTimeout)
-			defer cancel()
-			urls, err := runGospider(ctx, domain, outputDir)
+			urls, err := runGospider(domain, outputDir)
 			if err != nil {
 				utils.LogWarn("gospider failed for %s: %v", domain, err)
 				return
@@ -111,13 +103,13 @@ func Enumerate(cfg *config.Config, domain string, outputDir string) []string {
 	return deduped
 }
 
-func runWaymore(ctx context.Context, domain, outputDir, venvPath string) ([]string, error) {
+func runWaymore(domain, outputDir, venvPath string) ([]string, error) {
 	outFile := fmt.Sprintf("%s/waymore_%s.txt", outputDir, domain)
 
 	shellCmd := fmt.Sprintf("source %q && waymore -i %q -mode U -oU %q 2>/dev/null",
 		venvPath, domain, outFile)
 
-	_, err := utils.RunShellCommand(ctx, shellCmd)
+	_, err := utils.RunShellCommand(context.Background(), shellCmd)
 	if err != nil {
 		return nil, fmt.Errorf("waymore execution failed: %v", err)
 	}
@@ -135,7 +127,7 @@ func runWaymore(ctx context.Context, domain, outputDir, venvPath string) ([]stri
 	return lines, nil
 }
 
-func runGau(ctx context.Context, domain string) ([]string, error) {
+func runGau(domain string) ([]string, error) {
 	// Dynamically resolve gau binary path
 	gauPath := ""
 	homeDir, _ := os.UserHomeDir()
@@ -158,14 +150,14 @@ func runGau(ctx context.Context, domain string) ([]string, error) {
 		gauPath = "gau"
 	}
 
-	return utils.RunCommand(ctx, gauPath, domain, "--subs")
+	return utils.RunCommand(context.Background(), gauPath, domain, "--subs")
 }
 
-func runParamspider(ctx context.Context, domain, venvPath, outputDir string) ([]string, error) {
+func runParamspider(domain, venvPath, outputDir string) ([]string, error) {
 	shellCmd := fmt.Sprintf("source %q && paramspider -d %q -s 2>/dev/null",
 		venvPath, domain)
 
-	lines, err := utils.RunShellCommand(ctx, shellCmd)
+	lines, err := utils.RunShellCommand(context.Background(), shellCmd)
 	if err != nil {
 		return nil, fmt.Errorf("paramspider execution failed: %v", err)
 	}
@@ -190,7 +182,7 @@ func runParamspider(ctx context.Context, domain, venvPath, outputDir string) ([]
 	return lines, nil
 }
 
-func runGospider(ctx context.Context, domain, outputDir string) ([]string, error) {
+func runGospider(domain, outputDir string) ([]string, error) {
 	if !utils.ToolExists("gospider") {
 		return nil, fmt.Errorf("gospider not found in PATH")
 	}
@@ -206,7 +198,7 @@ func runGospider(ctx context.Context, domain, outputDir string) ([]string, error
 		"--include-subs",
 	}
 
-	_, runErr := utils.RunCommand(ctx, "gospider", args...)
+	_, runErr := utils.RunCommand(context.Background(), "gospider", args...)
 
 	// Gospider writes output files to the output directory
 	// Read even on non-zero exit since it may have produced partial output
