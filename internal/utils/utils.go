@@ -23,6 +23,9 @@ const (
 	ColorGray   = "\033[90m"
 )
 
+// Version is the current version of NucleiDAST — update this for new releases
+const Version = "1.1.4"
+
 // domainRegex validates hostnames (RFC 952 / RFC 1123)
 var domainRegex = regexp.MustCompile(`^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$`)
 
@@ -217,13 +220,13 @@ func EnsureDir(path string) error {
 
 // Banner prints the program banner
 func Banner() {
-	banner := `
+	banner := fmt.Sprintf(`
     ╔═══════════════════════════════════════════════╗
-    ║           %sNucleiDAST%s v1.1.4                   ║
+    ║           %sNucleiDAST%s v%-24s║
     ║     Automated DAST Scanning Pipeline          ║
     ║                                               ║
     ║  Subdomains → DNS → URLs → Nuclei → Discord   ║
     ╚═══════════════════════════════════════════════╝
-`
-	fmt.Printf(banner, ColorBold+ColorCyan, ColorReset)
+`, ColorBold+ColorCyan, ColorReset, Version)
+	fmt.Print(banner)
 }

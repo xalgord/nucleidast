@@ -22,8 +22,9 @@ var (
 
 func main() {
 	rootCmd := &cobra.Command{
-		Use:   "nucleidast",
-		Short: "NucleiDAST — Automated DAST Scanning Pipeline",
+		Use:     "nucleidast",
+		Short:   "NucleiDAST — Automated DAST Scanning Pipeline",
+		Version: utils.Version,
 		Long: `NucleiDAST orchestrates an end-to-end DAST scanning pipeline:
   Subdomain Enumeration → DNS Resolution → URL Enumeration → Nuclei DAST → Discord Reporting
 
