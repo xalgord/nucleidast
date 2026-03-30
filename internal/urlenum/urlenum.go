@@ -14,7 +14,7 @@ import (
 
 // Enumerate runs all enabled URL enumeration tools in parallel
 // and returns a deduplicated list of URLs
-func Enumerate(cfg *config.Config, domain string, liveSubdomains []string, outputDir string) []string {
+func Enumerate(cfg *config.Config, domain string, outputDir string) []string {
 	utils.LogInfo("Starting URL enumeration for %s", domain)
 	start := time.Now()
 
@@ -31,7 +31,9 @@ func Enumerate(cfg *config.Config, domain string, liveSubdomains []string, outpu
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			urls, err := runWaymore(domain, outputDir, venvActivate)
+			ctx, cancel := context.WithTimeout(context.Background(), utils.DefaultToolTimeout)
+			defer cancel()
+			urls, err := runWaymore(ctx, domain, outputDir, venvActivate)
 			if err != nil {
 				utils.LogWarn("waymore failed for %s: %v", domain, err)
 				return
@@ -48,7 +50,9 @@ func Enumerate(cfg *config.Config, domain string, liveSubdomains []string, outpu
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			urls, err := runGau(domain)
+			ctx, cancel := context.WithTimeout(context.Background(), utils.DefaultToolTimeout)
+			defer cancel()
+			urls, err := runGau(ctx, domain)
 			if err != nil {
 				utils.LogWarn("gau failed for %s: %v", domain, err)
 				return
@@ -65,7 +69,9 @@ func Enumerate(cfg *config.Config, domain string, liveSubdomains []string, outpu
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			urls, err := runParamspider(domain, venvActivate)
+			ctx, cancel := context.WithTimeout(context.Background(), utils.DefaultToolTimeout)
+			defer cancel()
+			urls, err := runParamspider(ctx, domain, venvActivate, outputDir)
 			if err != nil {
 				utils.LogWarn("paramspider failed for %s: %v", domain, err)
 				return
@@ -82,7 +88,9 @@ func Enumerate(cfg *config.Config, domain string, liveSubdomains []string, outpu
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			urls, err := runGospider(domain, outputDir)
+			ctx, cancel := context.WithTimeout(context.Background(), utils.DefaultToolTimeout)
+			defer cancel()
+			urls, err := runGospider(ctx, domain, outputDir)
 			if err != nil {
 				utils.LogWarn("gospider failed for %s: %v", domain, err)
 				return
@@ -103,13 +111,13 @@ func Enumerate(cfg *config.Config, domain string, liveSubdomains []string, outpu
 	return deduped
 }
 
-func runWaymore(domain, outputDir, venvPath string) ([]string, error) {
+func runWaymore(ctx context.Context, domain, outputDir, venvPath string) ([]string, error) {
 	outFile := fmt.Sprintf("%s/waymore_%s.txt", outputDir, domain)
 
 	shellCmd := fmt.Sprintf("source %q && waymore -i %q -mode U -oU %q 2>/dev/null",
 		venvPath, domain, outFile)
 
-	_, err := utils.RunShellCommand(context.Background(), shellCmd)
+	_, err := utils.RunShellCommand(ctx, shellCmd)
 	if err != nil {
 		return nil, fmt.Errorf("waymore execution failed: %v", err)
 	}
@@ -127,10 +135,16 @@ func runWaymore(domain, outputDir, venvPath string) ([]string, error) {
 	return lines, nil
 }
 
-func runGau(domain string) ([]string, error) {
-	// Use full path to avoid shell alias conflicts
+func runGau(ctx context.Context, domain string) ([]string, error) {
+	// Dynamically resolve gau binary path
 	gauPath := ""
-	for _, p := range []string{"/home/vulture/go/bin/gau", "/usr/local/bin/gau", "/usr/bin/gau"} {
+	homeDir, _ := os.UserHomeDir()
+	candidates := []string{
+		fmt.Sprintf("%s/go/bin/gau", homeDir),
+		"/usr/local/bin/gau",
+		"/usr/bin/gau",
+	}
+	for _, p := range candidates {
 		if _, err := os.Stat(p); err == nil {
 			gauPath = p
 			break
@@ -144,20 +158,22 @@ func runGau(domain string) ([]string, error) {
 		gauPath = "gau"
 	}
 
-	return utils.RunCommand(context.Background(), gauPath, domain, "--subs")
+	return utils.RunCommand(ctx, gauPath, domain, "--subs")
 }
 
-func runParamspider(domain, venvPath string) ([]string, error) {
+func runParamspider(ctx context.Context, domain, venvPath, outputDir string) ([]string, error) {
 	shellCmd := fmt.Sprintf("source %q && paramspider -d %q -s 2>/dev/null",
 		venvPath, domain)
 
-	lines, err := utils.RunShellCommand(context.Background(), shellCmd)
+	lines, err := utils.RunShellCommand(ctx, shellCmd)
 	if err != nil {
 		return nil, fmt.Errorf("paramspider execution failed: %v", err)
 	}
 
-	// Paramspider also writes to output/ directory, try to read from there
+	// Paramspider writes to output/ directory, use absolute paths
 	possibleFiles := []string{
+		fmt.Sprintf("%s/output/%s.txt", outputDir, domain),
+		fmt.Sprintf("%s/results/%s.txt", outputDir, domain),
 		fmt.Sprintf("output/%s.txt", domain),
 		fmt.Sprintf("results/%s.txt", domain),
 	}
@@ -174,7 +190,7 @@ func runParamspider(domain, venvPath string) ([]string, error) {
 	return lines, nil
 }
 
-func runGospider(domain, outputDir string) ([]string, error) {
+func runGospider(ctx context.Context, domain, outputDir string) ([]string, error) {
 	if !utils.ToolExists("gospider") {
 		return nil, fmt.Errorf("gospider not found in PATH")
 	}
@@ -190,7 +206,7 @@ func runGospider(domain, outputDir string) ([]string, error) {
 		"--include-subs",
 	}
 
-	_, runErr := utils.RunCommand(context.Background(), "gospider", args...)
+	_, runErr := utils.RunCommand(ctx, "gospider", args...)
 
 	// Gospider writes output files to the output directory
 	// Read even on non-zero exit since it may have produced partial output

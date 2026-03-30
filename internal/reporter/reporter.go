@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -247,33 +249,36 @@ func (r *Reporter) send(payload WebhookPayload) error {
 		return fmt.Errorf("failed to marshal payload: %w", err)
 	}
 
-	resp, err := r.client.Post(r.cfg.Discord.WebhookURL, "application/json", bytes.NewReader(body))
-	if err != nil {
-		return fmt.Errorf("failed to send webhook: %w", err)
-	}
-	defer resp.Body.Close()
-
-	// Handle rate limiting
-	if resp.StatusCode == 429 {
-		utils.LogWarn("Discord rate limited, waiting 5 seconds...")
-		time.Sleep(5 * time.Second)
-		// Retry once
-		resp2, err := r.client.Post(r.cfg.Discord.WebhookURL, "application/json", bytes.NewReader(body))
+	const maxRetries = 3
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		resp, err := r.client.Post(r.cfg.Discord.WebhookURL, "application/json", bytes.NewReader(body))
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to send webhook: %w", err)
 		}
-		defer resp2.Body.Close()
-		if resp2.StatusCode >= 400 {
-			return fmt.Errorf("discord webhook returned status %d after retry", resp2.StatusCode)
+		io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+
+		if resp.StatusCode == 429 {
+			// Read Retry-After header from Discord
+			waitSec := 5 // default fallback
+			if ra := resp.Header.Get("Retry-After"); ra != "" {
+				if parsed, err := strconv.Atoi(ra); err == nil && parsed > 0 {
+					waitSec = parsed
+				}
+			}
+			utils.LogWarn("Discord rate limited, waiting %ds (attempt %d/%d)...", waitSec, attempt+1, maxRetries)
+			time.Sleep(time.Duration(waitSec) * time.Second)
+			continue
 		}
+
+		if resp.StatusCode >= 400 {
+			return fmt.Errorf("discord webhook returned status %d", resp.StatusCode)
+		}
+
 		return nil
 	}
 
-	if resp.StatusCode >= 400 {
-		return fmt.Errorf("discord webhook returned status %d", resp.StatusCode)
-	}
-
-	return nil
+	return fmt.Errorf("discord webhook failed after %d retries (rate limited)", maxRetries)
 }
 
 func severityToColor(severity string) int {
@@ -311,12 +316,15 @@ func severityEmoji(severity string) string {
 }
 
 func truncate(s string, maxLen int) string {
-	if maxLen <= 3 {
-		return s
+	if maxLen <= 0 {
+		return ""
 	}
 	runes := []rune(s)
 	if len(runes) <= maxLen {
 		return s
+	}
+	if maxLen <= 3 {
+		return string(runes[:maxLen])
 	}
 	return string(runes[:maxLen-3]) + "..."
 }

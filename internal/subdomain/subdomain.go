@@ -27,7 +27,9 @@ func Enumerate(cfg *config.Config, domain string) []string {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			subs, err := runSubfinder(domain, cfg.Subdomain.Threads)
+			ctx, cancel := context.WithTimeout(context.Background(), utils.DefaultToolTimeout)
+			defer cancel()
+			subs, err := runSubfinder(ctx, domain, cfg.Subdomain.Threads)
 			if err != nil {
 				utils.LogWarn("subfinder failed for %s: %v", domain, err)
 				return
@@ -44,7 +46,9 @@ func Enumerate(cfg *config.Config, domain string) []string {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			subs, err := runFindomain(domain)
+			ctx, cancel := context.WithTimeout(context.Background(), utils.DefaultToolTimeout)
+			defer cancel()
+			subs, err := runFindomain(ctx, domain)
 			if err != nil {
 				utils.LogWarn("findomain failed for %s: %v", domain, err)
 				return
@@ -61,7 +65,9 @@ func Enumerate(cfg *config.Config, domain string) []string {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			subs, err := runAssetfinder(domain)
+			ctx, cancel := context.WithTimeout(context.Background(), utils.DefaultToolTimeout)
+			defer cancel()
+			subs, err := runAssetfinder(ctx, domain)
 			if err != nil {
 				utils.LogWarn("assetfinder failed for %s: %v", domain, err)
 				return
@@ -82,7 +88,7 @@ func Enumerate(cfg *config.Config, domain string) []string {
 	return deduped
 }
 
-func runSubfinder(domain string, threads int) ([]string, error) {
+func runSubfinder(ctx context.Context, domain string, threads int) ([]string, error) {
 	if !utils.ToolExists("subfinder") {
 		return nil, fmt.Errorf("subfinder not found in PATH")
 	}
@@ -95,22 +101,22 @@ func runSubfinder(domain string, threads int) ([]string, error) {
 		"-silent",
 	}
 
-	return utils.RunCommand(context.Background(), "subfinder", args...)
+	return utils.RunCommand(ctx, "subfinder", args...)
 }
 
-func runFindomain(domain string) ([]string, error) {
+func runFindomain(ctx context.Context, domain string) ([]string, error) {
 	if !utils.ToolExists("findomain") {
 		return nil, fmt.Errorf("findomain not found in PATH")
 	}
 
-	return utils.RunCommand(context.Background(), "findomain", "-t", domain, "-q")
+	return utils.RunCommand(ctx, "findomain", "-t", domain, "-q")
 }
 
-func runAssetfinder(domain string) ([]string, error) {
+func runAssetfinder(ctx context.Context, domain string) ([]string, error) {
 	if !utils.ToolExists("assetfinder") {
 		return nil, fmt.Errorf("assetfinder not found in PATH")
 	}
 
 	shellCmd := fmt.Sprintf("echo %q | assetfinder --subs-only", domain)
-	return utils.RunShellCommand(context.Background(), shellCmd)
+	return utils.RunShellCommand(ctx, shellCmd)
 }

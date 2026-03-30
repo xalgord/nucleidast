@@ -38,7 +38,10 @@ func Resolve(cfg *config.Config, subdomains []string, outputDir string) ([]strin
 		"-t", fmt.Sprintf("%d", cfg.DNS.Threads),
 	}
 
-	cmd := exec.CommandContext(context.Background(), "dnsx", args...)
+	ctx, cancel := context.WithTimeout(context.Background(), utils.DefaultToolTimeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "dnsx", args...)
 	utils.LogDebug("Running: dnsx %s", strings.Join(args, " "))
 
 	// Use separate buffers so we get stdout even on non-zero exit

@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -31,10 +32,19 @@ func Run(cfg *config.Config, targets []string) error {
 	// Semaphore to limit concurrent target processing
 	sem := make(chan struct{}, cfg.MaxConcurrentTargets)
 	var wg sync.WaitGroup
-	errors := make([]error, 0)
+	errs := make([]error, 0)
 	var errorsMu sync.Mutex
 
 	for _, target := range targets {
+		// Validate domain before processing
+		if !utils.IsValidDomain(target) {
+			utils.LogError("Invalid domain name: %s — skipping", target)
+			errorsMu.Lock()
+			errs = append(errs, fmt.Errorf("%s: invalid domain name", target))
+			errorsMu.Unlock()
+			continue
+		}
+
 		wg.Add(1)
 		sem <- struct{}{} // acquire semaphore
 
@@ -45,7 +55,7 @@ func Run(cfg *config.Config, targets []string) error {
 			if err := processDomain(cfg, domain); err != nil {
 				utils.LogError("Pipeline failed for %s: %v", domain, err)
 				errorsMu.Lock()
-				errors = append(errors, fmt.Errorf("%s: %w", domain, err))
+				errs = append(errs, fmt.Errorf("%s: %w", domain, err))
 				errorsMu.Unlock()
 			}
 		}(target)
@@ -56,11 +66,12 @@ func Run(cfg *config.Config, targets []string) error {
 	elapsed := time.Since(start).Round(time.Second)
 	utils.LogSuccess("All targets processed in %s", elapsed)
 
-	if len(errors) > 0 {
-		utils.LogWarn("%d target(s) had errors:", len(errors))
-		for _, err := range errors {
+	if len(errs) > 0 {
+		utils.LogWarn("%d target(s) had errors:", len(errs))
+		for _, err := range errs {
 			utils.LogError("  → %v", err)
 		}
+		return errors.Join(errs...)
 	}
 
 	return nil
@@ -111,11 +122,18 @@ func processDomain(cfg *config.Config, domain string) error {
 		liveSubdomains = []string{domain}
 	}
 
+	// Save live subdomains
+	liveSubsFile := fmt.Sprintf("%s/live_subdomains.txt", domainOutputDir)
+	if err := utils.WriteLinesToFile(liveSubsFile, liveSubdomains); err != nil {
+		utils.LogWarn("Failed to save live subdomains file: %v", err)
+	}
+	utils.LogInfo("Saved %d live subdomains to %s", len(liveSubdomains), liveSubsFile)
+
 	// ────────────────────────────────────────────
 	// Stage 3: URL Enumeration
 	// ────────────────────────────────────────────
 	utils.LogInfo("▶ Stage 3: URL Enumeration")
-	urls := urlenum.Enumerate(cfg, domain, liveSubdomains, domainOutputDir)
+	urls := urlenum.Enumerate(cfg, domain, domainOutputDir)
 
 	if len(urls) == 0 {
 		utils.LogWarn("No URLs found for %s, skipping nuclei scan", domain)
