@@ -43,12 +43,12 @@ func Enumerate(cfg *config.Config, domain string, liveSubdomains []string, outpu
 		}()
 	}
 
-	// Gau (runs on all live subdomains)
+	// Gau (runs per domain with --subs to include subdomains)
 	if cfg.URLEnum.UseGau {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			urls, err := runGau(domain, liveSubdomains, outputDir)
+			urls, err := runGau(domain)
 			if err != nil {
 				utils.LogWarn("gau failed for %s: %v", domain, err)
 				return
@@ -60,7 +60,7 @@ func Enumerate(cfg *config.Config, domain string, liveSubdomains []string, outpu
 		}()
 	}
 
-	// Paramspider (runs with wildcard *.domain)
+	// Paramspider (runs per domain)
 	if cfg.URLEnum.UseParamspider {
 		wg.Add(1)
 		go func() {
@@ -77,12 +77,12 @@ func Enumerate(cfg *config.Config, domain string, liveSubdomains []string, outpu
 		}()
 	}
 
-	// Gospider (runs on all live subdomains)
+	// Gospider (runs per domain)
 	if cfg.URLEnum.UseGospider {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			urls, err := runGospider(domain, liveSubdomains, outputDir)
+			urls, err := runGospider(domain, outputDir)
 			if err != nil {
 				utils.LogWarn("gospider failed for %s: %v", domain, err)
 				return
@@ -127,7 +127,7 @@ func runWaymore(domain, outputDir, venvPath string) ([]string, error) {
 	return lines, nil
 }
 
-func runGau(domain string, liveSubdomains []string, outputDir string) ([]string, error) {
+func runGau(domain string) ([]string, error) {
 	// Use full path to avoid shell alias conflicts
 	gauPath := ""
 	for _, p := range []string{"/home/vulture/go/bin/gau", "/usr/local/bin/gau", "/usr/bin/gau"} {
@@ -144,29 +144,12 @@ func runGau(domain string, liveSubdomains []string, outputDir string) ([]string,
 		gauPath = "gau"
 	}
 
-	// Write all live subdomains to a file and pipe to gau
-	subsFile := fmt.Sprintf("%s/gau_subs_%s.txt", outputDir, domain)
-	if err := utils.WriteLinesToFile(subsFile, liveSubdomains); err != nil {
-		return nil, fmt.Errorf("failed to write gau subs file: %w", err)
-	}
-	utils.LogInfo("gau: querying %d subdomains for %s", len(liveSubdomains), domain)
-
-	shellCmd := fmt.Sprintf("cat %q | %q --subs 2>/dev/null", subsFile, gauPath)
-	lines, err := utils.RunShellCommand(context.Background(), shellCmd)
-
-	// Clean up the temporary subs file
-	os.Remove(subsFile)
-
-	return lines, err
+	return utils.RunCommand(context.Background(), gauPath, domain, "--subs")
 }
 
 func runParamspider(domain, venvPath string) ([]string, error) {
-	// Use wildcard target to cover all subdomains
-	wildcard := fmt.Sprintf("*.%s", domain)
-	utils.LogInfo("paramspider: using wildcard target %s", wildcard)
-
 	shellCmd := fmt.Sprintf("source %q && paramspider -d %q -s 2>/dev/null",
-		venvPath, wildcard)
+		venvPath, domain)
 
 	lines, err := utils.RunShellCommand(context.Background(), shellCmd)
 	if err != nil {
@@ -175,8 +158,6 @@ func runParamspider(domain, venvPath string) ([]string, error) {
 
 	// Paramspider also writes to output/ directory, try to read from there
 	possibleFiles := []string{
-		fmt.Sprintf("output/%s.txt", wildcard),
-		fmt.Sprintf("results/%s.txt", wildcard),
 		fmt.Sprintf("output/%s.txt", domain),
 		fmt.Sprintf("results/%s.txt", domain),
 	}
@@ -193,26 +174,15 @@ func runParamspider(domain, venvPath string) ([]string, error) {
 	return lines, nil
 }
 
-func runGospider(domain string, liveSubdomains []string, outputDir string) ([]string, error) {
+func runGospider(domain, outputDir string) ([]string, error) {
 	if !utils.ToolExists("gospider") {
 		return nil, fmt.Errorf("gospider not found in PATH")
 	}
 
-	// Write all live subdomains as HTTP URLs to a temp file for gospider -S
-	sitesFile := fmt.Sprintf("%s/gospider_sites_%s.txt", outputDir, domain)
-	var sites []string
-	for _, sub := range liveSubdomains {
-		sites = append(sites, fmt.Sprintf("http://%s", sub))
-	}
-	if err := utils.WriteLinesToFile(sitesFile, sites); err != nil {
-		return nil, fmt.Errorf("failed to write gospider sites file: %w", err)
-	}
-	utils.LogInfo("gospider: crawling %d subdomains for %s", len(sites), domain)
-
 	gospiderOut := fmt.Sprintf("%s/gospider_%s", outputDir, domain)
 
 	args := []string{
-		"-S", sitesFile,
+		"-s", fmt.Sprintf("http://%s", domain),
 		"-o", gospiderOut,
 		"-c", "10",
 		"-d", "1",
@@ -252,9 +222,6 @@ func runGospider(domain string, liveSubdomains []string, outputDir string) ([]st
 			}
 		}
 	}
-
-	// Clean up the temporary sites file
-	os.Remove(sitesFile)
 
 	return allURLs, nil
 }
