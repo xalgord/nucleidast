@@ -39,6 +39,7 @@ Run as root to ensure all tools are accessible.`,
 	rootCmd.Flags().StringVarP(&configFile, "config", "c", defaultConfig, "Path to config file")
 	rootCmd.Flags().StringVarP(&outputDir, "output", "o", "", "Output directory (overrides config)")
 	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose/debug output")
+	rootCmd.Flags().BoolP("version", "V", false, "Print version")
 
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
